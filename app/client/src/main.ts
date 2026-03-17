@@ -6,6 +6,7 @@ import { api } from './api/client'
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
   initializeQueryInput();
+  initializeRandomQueryButton();
   initializeFileUpload();
   initializeModal();
   loadDatabaseSchema();
@@ -45,6 +46,35 @@ function initializeQueryInput() {
   queryInput.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       queryButton.click();
+    }
+  });
+}
+
+// Random Query Button Functionality
+function initializeRandomQueryButton() {
+  const queryInput = document.getElementById('query-input') as HTMLTextAreaElement;
+  const randomQueryButton = document.getElementById('generate-random-query-button') as HTMLButtonElement;
+
+  randomQueryButton.addEventListener('click', async () => {
+    randomQueryButton.disabled = true;
+    randomQueryButton.innerHTML = '<span class="loading"></span> Generating...';
+
+    try {
+      const response = await api.getRandomQuery();
+
+      if (response.error) {
+        displayError(response.error);
+      } else if (response.query) {
+        // Overwrite the input field with the generated query
+        queryInput.value = response.query;
+        // Focus the input field
+        queryInput.focus();
+      }
+    } catch (error) {
+      displayError(error instanceof Error ? error.message : 'Failed to generate random query');
+    } finally {
+      randomQueryButton.disabled = false;
+      randomQueryButton.textContent = 'Generate Random Query';
     }
   });
 }

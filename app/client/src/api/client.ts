@@ -75,5 +75,10 @@ export const api = {
   // Health check
   async healthCheck(): Promise<HealthCheckResponse> {
     return apiRequest<HealthCheckResponse>('/health');
+  },
+
+  // Get random query
+  async getRandomQuery(): Promise<RandomQueryResponse> {
+    return apiRequest<RandomQueryResponse>('/random-query');
   }
 };
