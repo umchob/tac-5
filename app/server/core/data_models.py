@@ -80,3 +80,11 @@ class HealthCheckResponse(BaseModel):
     tables_count: int
     version: str = "1.0.0"
     uptime_seconds: float
+
+# Random Query Models
+class RandomQueryRequest(BaseModel):
+    pass  # No input needed
+
+class RandomQueryResponse(BaseModel):
+    query: str
+    error: Optional[str] = None

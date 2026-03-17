@@ -17,10 +17,12 @@ from core.data_models import (
     InsightsResponse,
     HealthCheckResponse,
     TableSchema,
-    ColumnInfo
+    ColumnInfo,
+    RandomQueryRequest,
+    RandomQueryResponse
 )
 from core.file_processor import convert_csv_to_sqlite, convert_json_to_sqlite, convert_jsonl_to_sqlite
-from core.llm_processor import generate_sql
+from core.llm_processor import generate_sql, generate_random_nl_query
 from core.sql_processor import execute_sql_safely, get_database_schema
 from core.insights import generate_insights
 from core.sql_security import (
@@ -217,9 +219,9 @@ async def health_check() -> HealthCheckResponse:
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = cursor.fetchall()
         conn.close()
-        
+
         uptime = (datetime.now() - app_start_time).total_seconds()
-        
+
         response = HealthCheckResponse(
             status="ok",
             database_connected=True,
@@ -236,6 +238,34 @@ async def health_check() -> HealthCheckResponse:
             database_connected=False,
             tables_count=0,
             uptime_seconds=0
+        )
+
+@app.get("/api/random-query", response_model=RandomQueryResponse)
+async def get_random_query() -> RandomQueryResponse:
+    """Generate a random natural language query based on database schema"""
+    try:
+        # Get database schema
+        schema_info = get_database_schema()
+
+        # Check if there are any tables
+        if not schema_info.get('tables') or len(schema_info['tables']) == 0:
+            return RandomQueryResponse(
+                query="",
+                error="No tables found in database. Please upload data first."
+            )
+
+        # Generate random natural language query
+        query = generate_random_nl_query(schema_info)
+
+        response = RandomQueryResponse(query=query)
+        logger.info(f"[SUCCESS] Random query generated: {query}")
+        return response
+    except Exception as e:
+        logger.error(f"[ERROR] Random query generation failed: {str(e)}")
+        logger.error(f"[ERROR] Full traceback:\n{traceback.format_exc()}")
+        return RandomQueryResponse(
+            query="",
+            error=str(e)
         )
 
 @app.delete("/api/table/{table_name}")

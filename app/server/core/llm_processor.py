@@ -148,15 +148,139 @@ def generate_sql(request: QueryRequest, schema_info: Dict[str, Any]) -> str:
     """
     openai_key = os.environ.get("OPENAI_API_KEY")
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-    
+
     # Check API key availability first (OpenAI priority)
     if openai_key:
         return generate_sql_with_openai(request.query, schema_info)
     elif anthropic_key:
         return generate_sql_with_anthropic(request.query, schema_info)
-    
+
     # Fall back to request preference if both keys available or neither available
     if request.llm_provider == "openai":
         return generate_sql_with_openai(request.query, schema_info)
     else:
         return generate_sql_with_anthropic(request.query, schema_info)
+
+def generate_random_nl_query_with_openai(schema_info: Dict[str, Any]) -> str:
+    """
+    Generate random natural language query using OpenAI API
+    """
+    try:
+        # Get API key from environment
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable not set")
+
+        client = OpenAI(api_key=api_key)
+
+        # Format schema for prompt
+        schema_description = format_schema_for_prompt(schema_info)
+
+        # Create prompt
+        prompt = f"""Given the following database schema:
+
+{schema_description}
+
+Generate ONE interesting natural language query that a user might ask about this data.
+Requirements:
+- Maximum 2 sentences
+- Be specific and reference actual table/column names
+- Make it different each time
+- Return ONLY the query text, no explanations
+- Focus on interesting insights like filtering, aggregation, or finding patterns
+
+Query:"""
+
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": "You are a data analyst assistant. Generate interesting natural language queries based on database schemas."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.8,  # Higher temperature for more variety
+            max_tokens=150
+        )
+
+        query = response.choices[0].message.content.strip()
+
+        # Clean up the response (remove quotes if present)
+        if query.startswith('"') and query.endswith('"'):
+            query = query[1:-1]
+        if query.startswith("'") and query.endswith("'"):
+            query = query[1:-1]
+
+        return query
+
+    except Exception as e:
+        raise Exception(f"Error generating random query with OpenAI: {str(e)}")
+
+def generate_random_nl_query_with_anthropic(schema_info: Dict[str, Any]) -> str:
+    """
+    Generate random natural language query using Anthropic API
+    """
+    try:
+        # Get API key from environment
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY environment variable not set")
+
+        client = Anthropic(api_key=api_key)
+
+        # Format schema for prompt
+        schema_description = format_schema_for_prompt(schema_info)
+
+        # Create prompt
+        prompt = f"""Given the following database schema:
+
+{schema_description}
+
+Generate ONE interesting natural language query that a user might ask about this data.
+Requirements:
+- Maximum 2 sentences
+- Be specific and reference actual table/column names
+- Make it different each time
+- Return ONLY the query text, no explanations
+- Focus on interesting insights like filtering, aggregation, or finding patterns
+
+Query:"""
+
+        # Call Anthropic API
+        response = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=150,
+            temperature=0.8,  # Higher temperature for more variety
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        query = response.content[0].text.strip()
+
+        # Clean up the response (remove quotes if present)
+        if query.startswith('"') and query.endswith('"'):
+            query = query[1:-1]
+        if query.startswith("'") and query.endswith("'"):
+            query = query[1:-1]
+
+        return query
+
+    except Exception as e:
+        raise Exception(f"Error generating random query with Anthropic: {str(e)}")
+
+def generate_random_nl_query(schema_info: Dict[str, Any]) -> str:
+    """
+    Generate a random natural language query based on database schema.
+    Uses existing API key management logic (prioritize OpenAI, fallback to Anthropic).
+    """
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+
+    # Check API key availability first (OpenAI priority)
+    if openai_key:
+        return generate_random_nl_query_with_openai(schema_info)
+    elif anthropic_key:
+        return generate_random_nl_query_with_anthropic(schema_info)
+
+    # No API key available
+    raise ValueError("No LLM API key found. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY environment variable.")

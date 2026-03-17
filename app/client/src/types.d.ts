@@ -78,3 +78,13 @@ interface HealthCheckResponse {
   version: string;
   uptime_seconds: number;
 }
+
+// Random Query Types
+interface RandomQueryRequest {
+  // Empty - no input needed
+}
+
+interface RandomQueryResponse {
+  query: string;
+  error?: string;
+}

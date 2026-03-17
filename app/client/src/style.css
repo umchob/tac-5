@@ -84,6 +84,12 @@ h2 {
   align-items: center;
 }
 
+.query-controls-secondary {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
 /* Buttons */
 .primary-button,
 .secondary-button,
